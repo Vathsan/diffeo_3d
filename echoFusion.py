@@ -15,7 +15,7 @@ class RegParam:
 
     def __init__(
         self,
-        mx_iter=5.0,   #
+        mx_iter=1.0,   #
         n_euler=20.0,   # increase
         t=0.5,
         t_up=1.0,
@@ -36,7 +36,16 @@ class RegParam:
 
 prm = RegParam()
 
-def register_sequence(input_dir, fixed_img, frame_no, output_dir):
+def transform(image, pos):
+    im_t_py = torch.from_numpy(image).float().to(device).repeat(1, 1, 1, 1, 1)
+    im_w_py = mygriddata_3d_py(pos, im_t_py)
+
+    im_w = im_w_py.detach().cpu().numpy()
+    im_w = np.squeeze(im_w)
+
+    return im_w
+
+def register_sequence(input_dir, rigidMaskDir, fixed_img, frame_no, output_dir):
     im_s, hdr_s = nrrd.read(os.path.join(input_dir, fixed_img))
     dim = hdr_s["sizes"][1:4]
     frames = hdr_s["sizes"][0]
@@ -56,26 +65,32 @@ def register_sequence(input_dir, fixed_img, frame_no, output_dir):
 
             pos, f, smeasure, smeasure_new, tstep = torch_registration_3d(im_s_py, im_t_py, prm)
 
+            mask = filename.rsplit("_", 1)[0] + "_Mask.nrrd"
+            maskData, maskHeader = nrrd.read(os.path.join(rigidMaskDir, mask))
+            mask_frames, x, y, z = maskData.shape
+            output_mask = np.ndarray(shape=(mask_frames, x, y, z))
+
             for i in range(frames):
                 print("Starting transformation for frame ", str(i))
-                im_t_py = im_t[i, :, :, :]
-                im_t_py = torch.from_numpy(im_t_py).float().to(device).repeat(1, 1, 1, 1, 1)
-                im_w_py = mygriddata_3d_py(pos, im_t_py)
-
-                im_w = im_w_py.detach().cpu().numpy()
-                im_w = np.squeeze(im_w)
-
-                output_nrrd[i, :, :, :] = im_w
+                output_nrrd[i, :, :, :] = transform(im_t[i, :, :, :], pos)
+                reg_mask = transform(maskData[i, :, :, :], pos)
+                reg_mask[reg_mask > 0] = 1
+                output_mask[i, :, :, :] = reg_mask
 
             output_nrrd = ((output_nrrd - np.min(output_nrrd)) / (np.max(output_nrrd) - np.min(output_nrrd))) * 255
             output_nrrd = output_nrrd.astype('uint8')
 
             output_name = filename.rsplit("_", 1)[0] + "_diffeo.nrrd"
+            print("Writing transformed image")
             nrrd.write(os.path.join(output_dir, output_name), output_nrrd, hdr_t)
+            print("Writing transformed mask")
+            nrrd.write(os.path.join(output_dir, mask), output_mask, header=maskHeader)
+            print("*" * 20)
 
-input_dir = "/home/sshanmug/scratch/echoFusion/volunteer01_full/test"
-fixed_img = "Seq_015_20230126_152600_3D.seq.nrrd"
+input_dir = "/media/srivathsan/New Volume/EchoFusion/3DNew/SS/registered/rigid/"
+fixed_img = "E9PCCZHF_ApSt.nrrd"
 frame_no = 0
-output_dir = "/home/sshanmug/scratch/echoFusion/registered/volunteer01/diffeo"
+output_dir = "/media/srivathsan/New Volume/EchoFusion/3DNew/SS/registered/diffeo/"
+rigidMaskDir = "/media/srivathsan/New Volume/EchoFusion/3DNew/SS/binary_mask_rigid_reduced/"
 
-register_sequence(input_dir, fixed_img, frame_no, output_dir)
+register_sequence(input_dir, rigidMaskDir, fixed_img, frame_no, output_dir)
