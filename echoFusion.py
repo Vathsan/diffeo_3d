@@ -73,9 +73,9 @@ def register_sequence(input_dir, fixed_img, frame_no, output_dir):
             output_name = filename.rsplit("_", 1)[0] + "_diffeo.nrrd"
             nrrd.write(os.path.join(output_dir, output_name), output_nrrd, hdr_t)
 
-input_dir = "/media/srivathsan/New Volume/EchoFusion/3DNew/SS/registered/rigid/"
-fixed_img = "E9PCCZHF_ApSt.nrrd"
+input_dir = "/home/sshanmug/scratch/echoFusion/volunteer01_full/test"
+fixed_img = "Seq_015_20230126_152600_3D.seq.nrrd"
 frame_no = 0
-output_dir = "/media/srivathsan/New Volume/EchoFusion/3DNew/SS/registered/diffeo"
+output_dir = "/home/sshanmug/scratch/echoFusion/registered/volunteer01/diffeo"
 
 register_sequence(input_dir, fixed_img, frame_no, output_dir)
