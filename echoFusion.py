@@ -15,14 +15,14 @@ class RegParam:
 
     def __init__(
         self,
-        mx_iter=1.0,   #
+        mx_iter=20.0,   #
         n_euler=20.0,   # increase
         t=0.5,
         t_up=1.0,
         t_dn=2.0 / 3.0,
         mn_t=0.01,
-        j_lb=0.1,  # 0.1
-        j_ub=6.0,   #
+        j_lb=0.9,  # 0.8/0.9
+        j_ub=1.5,   # 1.5/2.0
     ):
         self.mx_iter = mx_iter
         self.n_euler = n_euler
@@ -47,14 +47,14 @@ def transform(image, pos):
 
 def register_sequence(input_dir, rigidMaskDir, fixed_img, frame_no, output_dir):
     im_s, hdr_s = nrrd.read(os.path.join(input_dir, fixed_img))
-    dim = hdr_s["sizes"][1:4]
-    frames = hdr_s["sizes"][0]
-    output_nrrd = np.ndarray(shape=(frames, dim[0], dim[1], dim[2]))
 
     for file in os.listdir(input_dir):
         filename = os.fsdecode(file)
         if filename != fixed_img and filename.endswith(".nrrd"):
             im_t, hdr_t = nrrd.read(os.path.join(input_dir, filename))
+            dim = hdr_t["sizes"][1:4]
+            frames = hdr_t["sizes"][0]
+            output_nrrd = np.ndarray(shape=(frames, dim[0], dim[1], dim[2]))
             print("Registering ", filename)
 
             im_s_py = im_s[frame_no, :, :, :]
